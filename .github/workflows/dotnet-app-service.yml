@@ -1,0 +1,69 @@
+name: Deploy dotnet app service
+
+on: [push]
+
+env:
+  AZURE_WEBAPP_NAME: linuxappservice07152023 # set this to your application's name
+  AZURE_WEBAPP_PACKAGE_PATH: "." # set this to the path to your web app project, defaults to the repository root
+  DOTNET_VERSION: "6.0.x" # set this to the dot net version to use
+
+jobs:
+  deploy-infrastructure:
+    runs-on: ubuntu-latest
+
+    env:
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan -out main.tfplan
+
+      - name: Terraform Apply
+        run: terraform apply "main.tfplan"
+
+  deploy-code:
+    needs: deploy-infrastructure
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repo
+      - uses: actions/checkout@main
+      - uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Setup .NET Core SDK
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # Run dotnet build and publish
+      - name: dotnet build and publish
+        run: |
+          cd UserApi
+          dotnet restore
+          dotnet build --configuration Release
+          dotnet publish -c Release --property:PublishDir='${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/userapi'
+
+      # Deploy to Azure Web apps
+      - name: "Run Azure webapp deploy action using Azure Credentials"
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }} # Replace with your app name
+          package: "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/UserApi/userapi"
+
+      - name: logout
+        run: |
+          az logout
