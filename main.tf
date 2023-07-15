@@ -23,5 +23,4 @@ resource "azurerm_linux_web_app" "terraform_app_service" {
       dotnet_version = "6.0"
     }
   }
-
 }
