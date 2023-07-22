@@ -22,5 +22,8 @@ resource "azurerm_linux_web_app" "terraform_app_service" {
     application_stack {
       dotnet_version = "6.0"
     }
+    cors {
+      allowed_origins = ["http://localhost:3000"]
+    }
   }
 }
