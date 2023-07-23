@@ -24,12 +24,15 @@ jobs:
         uses: hashicorp/setup-terraform@v1
 
       - name: Terraform Init
+        working-directory: ./terraform
         run: terraform init
 
       - name: Terraform Plan
+        working-directory: ./terraform
         run: terraform plan -out main.tfplan
 
       - name: Terraform Apply
+        working-directory: ./terraform
         run: terraform apply "main.tfplan"
 
   deploy-code:
@@ -51,8 +54,8 @@ jobs:
 
       # Run dotnet build and publish
       - name: dotnet build and publish
+        working-directory: ./UserApi
         run: |
-          cd UserApi
           dotnet restore
           dotnet build --configuration Release
           dotnet publish -c Release --property:PublishDir='${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/userapi'
